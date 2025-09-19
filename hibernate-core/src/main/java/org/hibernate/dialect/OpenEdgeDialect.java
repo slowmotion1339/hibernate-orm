@@ -6,9 +6,6 @@ package org.hibernate.dialect;
 
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.TemporalType;
-import jakarta.persistence.Timeout;
-import org.hibernate.LockMode;
-import org.hibernate.Timeouts;
 import org.hibernate.boot.model.FunctionContributions;
 import org.hibernate.boot.model.TypeContributions;
 import org.hibernate.dialect.function.CommonFunctionFactory;
@@ -21,13 +18,10 @@ import org.hibernate.dialect.sequence.SequenceSupport;
 import org.hibernate.dialect.unique.UniqueDelegate;
 import org.hibernate.dialect.unique.DefaultUniqueDelegate;
 import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.exception.spi.SQLExceptionConversionDelegate;
 import org.hibernate.exception.spi.TemplatedViolatedConstraintNameExtractor;
 import org.hibernate.exception.spi.ViolatedConstraintNameExtractor;
 import org.hibernate.internal.util.JdbcExceptionHelper;
-import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.persister.entity.mutation.EntityMutationTarget;
 import org.hibernate.query.common.TemporalUnit;
 import org.hibernate.query.sqm.CastType;
 import org.hibernate.query.sqm.IntervalType;
@@ -36,9 +30,8 @@ import org.hibernate.sql.ast.spi.SqlAppender;
 import org.hibernate.type.SqlTypes;
 import org.hibernate.type.descriptor.sql.internal.DdlTypeImpl;
 import org.hibernate.type.descriptor.sql.spi.DdlTypeRegistry;
-import org.hibernate.type.spi.TypeConfiguration;
+import org.hibernate.type.descriptor.DateTimeUtils;
 
-import java.sql.Types;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
@@ -253,6 +246,7 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public String timestampaddPattern(TemporalUnit unit, TemporalType temporalType, IntervalType intervalType) {
 		return switch (unit) {
 			case YEAR -> "add-interval(?3, ?2, 'years')";
@@ -266,6 +260,7 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public String timestampdiffPattern(TemporalUnit unit, TemporalType fromTemporalType, TemporalType toTemporalType) {
 		return switch (unit) {
 			case YEAR -> "interval(?3, ?2, 'years')";
@@ -418,21 +413,6 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
-	public boolean supportsLimitOffset() {
-		return false; // Progress doesn't support LIMIT/OFFSET
-	}
-
-	@Override
-	public boolean supportsVariableLimit() {
-		return false;
-	}
-
-	@Override
-	public boolean bindLimitParametersFirst() {
-		return false;
-	}
-
-	@Override
 	public boolean supportsBindAsCallableArgument() {
 		return true;
 	}
@@ -469,11 +449,6 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
-	public String getForUpdateString(LockMode lockMode) {
-		return ""; // Progress doesn't support FOR UPDATE
-	}
-
-	@Override
 	public String getWriteLockString(int timeout) {
 		return ""; // Progress doesn't support row-level locking
 	}
@@ -494,11 +469,6 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
-	public boolean supportsLockTimeouts() {
-		return false;
-	}
-
-	@Override
 	public boolean supportsNoWait() {
 		return false;
 	}
@@ -514,23 +484,24 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public void appendDateTimeLiteral(SqlAppender appender, TemporalAccessor temporalAccessor, 
-			@SuppressWarnings("deprecation") TemporalType precision, TimeZone jdbcTimeZone) {
+			TemporalType precision, TimeZone jdbcTimeZone) {
 		// Progress uses specific date/time literal formats
 		switch (precision) {
 			case DATE:
-				appender.appendSql("'");
-				appendAsDate(appender, temporalAccessor);
+				appender.appendSql("date '");
+				DateTimeUtils.appendAsDate(appender, temporalAccessor);
 				appender.appendSql("'");
 				break;
 			case TIME:
-				appender.appendSql("'");
-				appendAsTime(appender, temporalAccessor, false, jdbcTimeZone);
+				appender.appendSql("time '");
+				DateTimeUtils.appendAsTime(appender, temporalAccessor, false, jdbcTimeZone);
 				appender.appendSql("'");
 				break;
 			case TIMESTAMP:
-				appender.appendSql("'");
-				appendAsTimestampWithNanos(appender, temporalAccessor, false, jdbcTimeZone);
+				appender.appendSql("timestamp '");
+				DateTimeUtils.appendAsTimestampWithNanos(appender, temporalAccessor, false, jdbcTimeZone);
 				appender.appendSql("'");
 				break;
 			default:
@@ -539,23 +510,24 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public void appendDateTimeLiteral(SqlAppender appender, Date date, 
-			@SuppressWarnings("deprecation") TemporalType precision, TimeZone jdbcTimeZone) {
+			TemporalType precision, TimeZone jdbcTimeZone) {
 		// Progress uses specific date/time literal formats
 		switch (precision) {
 			case DATE:
-				appender.appendSql("'");
-				appendAsDate(appender, date);
+				appender.appendSql("date '");
+				DateTimeUtils.appendAsDate(appender, date);
 				appender.appendSql("'");
 				break;
 			case TIME:
-				appender.appendSql("'");
-				appendAsLocalTime(appender, date);
+				appender.appendSql("time '");
+				DateTimeUtils.appendAsLocalTime(appender, date);
 				appender.appendSql("'");
 				break;
 			case TIMESTAMP:
-				appender.appendSql("'");
-				appendAsTimestampWithNanos(appender, date, jdbcTimeZone);
+				appender.appendSql("timestamp '");
+				DateTimeUtils.appendAsTimestampWithNanos(appender, date, jdbcTimeZone);
 				appender.appendSql("'");
 				break;
 			default:
@@ -564,23 +536,24 @@ public class OpenEdgeDialect extends Dialect {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public void appendDateTimeLiteral(SqlAppender appender, Calendar calendar, 
-			@SuppressWarnings("deprecation") TemporalType precision, TimeZone jdbcTimeZone) {
+			TemporalType precision, TimeZone jdbcTimeZone) {
 		// Progress uses specific date/time literal formats
 		switch (precision) {
 			case DATE:
-				appender.appendSql("'");
-				appendAsDate(appender, calendar);
+				appender.appendSql("date '");
+				DateTimeUtils.appendAsDate(appender, calendar);
 				appender.appendSql("'");
 				break;
 			case TIME:
-				appender.appendSql("'");
-				appendAsLocalTime(appender, calendar);
+				appender.appendSql("time '");
+				DateTimeUtils.appendAsLocalTime(appender, calendar);
 				appender.appendSql("'");
 				break;
 			case TIMESTAMP:
-				appender.appendSql("'");
-				appendAsTimestampWithMillis(appender, calendar, jdbcTimeZone);
+				appender.appendSql("timestamp '");
+				DateTimeUtils.appendAsTimestampWithMillis(appender, calendar, jdbcTimeZone);
 				appender.appendSql("'");
 				break;
 			default:
@@ -660,52 +633,5 @@ public class OpenEdgeDialect extends Dialect {
 	@Override
 	public boolean isEmptyStringTreatedAsNull() {
 		return false; // Progress distinguishes empty string from null
-	}
-
-	private static void appendAsDate(SqlAppender appender, TemporalAccessor temporalAccessor) {
-		// Progress date format: MM/DD/YYYY
-		// This is a simplified implementation
-		// In a real implementation, you'd format according to Progress requirements
-		appender.appendSql("date("+ temporalAccessor.toString() + ")");
-	}
-
-	private static void appendAsTime(SqlAppender appender, TemporalAccessor temporalAccessor, boolean withTimeZone, TimeZone jdbcTimeZone) {
-		// Progress time format
-		appender.appendSql("time("+ temporalAccessor.toString() + ")");
-	}
-
-	private static void appendAsTimestampWithNanos(SqlAppender appender, TemporalAccessor temporalAccessor, boolean withTimeZone, TimeZone jdbcTimeZone) {
-		// Progress timestamp format
-		appender.appendSql("timestamp("+ temporalAccessor.toString() + ")");
-	}
-
-	private static void appendAsDate(SqlAppender appender, Date date) {
-		// Progress date format for java.util.Date
-		appender.appendSql("date('" + date.toString() + "')");
-	}
-
-	private static void appendAsLocalTime(SqlAppender appender, Date date) {
-		// Progress time format for java.util.Date
-		appender.appendSql("time('" + date.toString() + "')");
-	}
-
-	private static void appendAsTimestampWithNanos(SqlAppender appender, Date date, TimeZone jdbcTimeZone) {
-		// Progress timestamp format for java.util.Date
-		appender.appendSql("timestamp('" + date.toString() + "')");
-	}
-
-	private static void appendAsDate(SqlAppender appender, Calendar calendar) {
-		// Progress date format for Calendar
-		appender.appendSql("date('" + calendar.getTime().toString() + "')");
-	}
-
-	private static void appendAsLocalTime(SqlAppender appender, Calendar calendar) {
-		// Progress time format for Calendar
-		appender.appendSql("time('" + calendar.getTime().toString() + "')");
-	}
-
-	private static void appendAsTimestampWithMillis(SqlAppender appender, Calendar calendar, TimeZone jdbcTimeZone) {
-		// Progress timestamp format for Calendar
-		appender.appendSql("timestamp('" + calendar.getTime().toString() + "')");
 	}
 }
